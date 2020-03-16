@@ -11,13 +11,14 @@ __version__ = '0.0.4'
 
 
 class FanShim():
-    def __init__(self, pin_fancontrol=18, pin_button=17, button_poll_delay=0.05):
+    def __init__(self, pin_fancontrol=18, pin_button=17, button_poll_delay=0.05, disable_button=False, disable_led=False):
         """FAN Shim.
 
         :param pin_fancontrol: BCM pin for fan on/off
         :param pin_button: BCM pin for button
 
         """
+        print(disable_button, disable_led, GPIO)
         self._pin_fancontrol = pin_fancontrol
         self._pin_button = pin_button
         self._poll_delay = button_poll_delay
@@ -27,19 +28,28 @@ class FanShim():
         self._button_hold_time = 2.0
         self._t_poll = None
 
+        self._disable_button = disable_button
+        self._disable_led = disable_led
+
         atexit.register(self._cleanup)
 
         GPIO.setwarnings(False)
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(self._pin_fancontrol, GPIO.OUT)
-        GPIO.setup(self._pin_button, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
-        plasma.set_clear_on_exit(True)
-        plasma.set_light_count(1)
-        plasma.set_light(0, 0, 0, 0)
+        if not self._disable_button:
+            GPIO.setup(self._pin_button, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+
+        if not self._disable_led:
+            plasma.set_clear_on_exit(True)
+            plasma.set_light_count(1)
+            plasma.set_light(0, 0, 0, 0)
 
     def start_polling(self):
         """Start button polling."""
+        if self._disable_button:
+            return
+
         if self._t_poll is None:
             self._t_poll = Thread(target=self._run)
             self._t_poll.daemon = True
@@ -47,6 +57,9 @@ class FanShim():
 
     def stop_polling(self):
         """Stop button polling."""
+        if self._disable_button:
+            return
+
         if self._t_poll is not None:
             self._running = False
             self._t_poll.join()
@@ -117,8 +130,9 @@ class FanShim():
         :param b: Blue (0-255)
 
         """
-        plasma.set_light(0, r, g, b)
-        plasma.show()
+        if not self._disable_led:
+            plasma.set_light(0, r, g, b)
+            plasma.show()
 
     def _cleanup(self):
         self.stop_polling()

@@ -84,7 +84,7 @@ Use --on-threshold and --off-threshold instead!
     sys.exit(1)
 
 
-fanshim = FanShim()
+fanshim = FanShim(disable_button=args.nobutton, disable_led=args.noled)
 fanshim.set_hold_time(1.0)
 fanshim.set_fan(False)
 armed = True
